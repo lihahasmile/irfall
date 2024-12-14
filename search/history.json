@@ -1,0 +1,31 @@
+{
+    "smile": {
+        "username": "smile",
+        "college": "计算机",
+        "major": "计科",
+        "history": [
+            "news.nankai.edu.cn",
+            "南开 历史",
+            "本科课堂教学质量",
+            "志愿者"
+        ]
+    },
+    "wgy": {
+        "username": "wgy",
+        "college": "外国语学院",
+        "major": "英语",
+        "history": [
+            "志愿者"
+        ]
+    },
+    "li": {
+        "username": "li",
+        "college": "计算机",
+        "major": "计科",
+        "history": [
+            "志愿",
+            "劳动",
+            "志愿者"
+        ]
+    }
+}

@@ -1,0 +1,20 @@
+{
+    "smile": {
+        "username": "smile",
+        "password": "123",
+        "college": "计算机",
+        "major": "计科"
+    },
+    "li": {
+        "username": "li",
+        "password": "123",
+        "college": "计算机",
+        "major": "计科"
+    },
+    "wgy": {
+        "username": "wgy",
+        "password": "123",
+        "college": "外国语学院",
+        "major": "英语"
+    }
+}

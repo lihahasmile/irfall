@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级搜索</title>
+    <style>
+        .highlight {
+            color: red;
+        }
+
+        .search-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 60px;
+            width: 100%;
+            max-width: 800px;
+            margin: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 50px;
+            overflow: hidden;
+            background-color: white;
+        }
+        .search-input {
+            flex: 1;
+            font-size: 1.2rem; /* 按钮字体大小 */
+            border: none;
+            outline: none;
+            width: 600px;
+            height: 50px;
+            padding-left: 30px;
+        }
+
+        .button {
+            padding: 28px 30px;
+            border: none;
+            font-size: 1.2rem; /* 按钮字体大小 */
+            background-color: #5aadfb;
+            color: white;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .search-button {
+            padding: 28px 30px;
+            border: none;
+            font-size: 1.2rem; /* 按钮字体大小 */
+            background-color: #2b87e9;
+            color: white;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .search-button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result-title {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .result-content {
+            margin-top: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3; /* 限制为3行 */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis; /* 超出时显示省略号 */
+        }
+        .result-url {
+            margin-top: 10px;
+            color: blue;
+            text-decoration: underline;
+        }
+        .history-dropdown {
+            position: absolute;
+            left: 30px;
+            background-color: white;
+            border: 1px solid #ddd;
+            width: 800px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            display: none; /* 默认隐藏 */
+            z-index: 1000;
+        }
+
+        .history-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background-color: #f0f0f0;
+        }
+        .clear-button {
+            margin-left: 10px;
+            font-size: 12px;
+            cursor: pointer;
+            position: absolute;
+            right: 10px; /* 控制水平位置 */
+            color: #888;
+        }
+        #suggestions {
+            position: absolute;
+            left: 30px;
+            background-color: white;
+            border: 1px solid #ddd;
+            width: 800px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            display: none; /* 默认隐藏 */
+            z-index: 1000;
+        }
+
+        #suggestions div {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        #suggestions div:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" class="search-input" placeholder="请输入搜索内容" id="searchText" placeholder="请输入搜索内容">
+        <button class="search-button" onclick="search()" style="margin-right: 10px;">搜索</button>
+        <button class="search-button" onclick="documentSearch()">文档查询</button>
+    </div>
+    
+
+    <div id="historyDropdown" class="history-dropdown"></div>
+    <div id="suggestions" class="#suggestions"></div>
+    <div id="results"></div>
+
+    <script>
+        const searchText = document.getElementById("searchText");
+        const dropdown = document.getElementById("historyDropdown");
+        const suggestionsBox = document.getElementById("suggestions");
+
+        searchText.addEventListener("input",async () => {
+            dropdown.style.display = "none";  // 隐藏下拉框
+            console.log("用户正在输入：", searchText.value);
+            const query = searchText.value.trim();
+            if (!query) {
+                suggestionsBox.style.display = 'none'; // 隐藏建议框
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+            const response = await fetch(`/personal/get_suggestions?q=${encodeURIComponent(query)}`);
+            if (response.ok) {
+                const data = await response.json();
+                showSuggestions(data);
+            }
+        });
+
+        // 显示推荐内容
+        function showSuggestions(suggestions) {
+            if(dropdown.style.display != "none"){
+                suggestionsBox.style.display = 'none';
+            }else{
+            suggestionsBox.innerHTML = '';
+            if (suggestions.length > 0) {
+                suggestionsBox.style.display = 'block'; // 显示建议框
+                suggestions.forEach(item => {
+                    const div = document.createElement('div');
+                    div.textContent = item;
+                    div.onclick = () => {
+                        searchText.value = item; // 点击填充输入框
+                        suggestionsBox.innerHTML = '';
+                        suggestionsBox.style.display = 'none'; // 隐藏建议框
+                    };
+                    suggestionsBox.appendChild(div);
+                });
+            } else {
+                suggestionsBox.style.display = 'none'; // 如果没有建议，则隐藏
+            }
+        }
+        }
+
+        // 点击输入框时显示下拉框
+        searchText.addEventListener("click", function (event) {
+            //print("显示")
+            loadQueryHistory();  // 加载查询历史
+            dropdown.style.display = "block";  // 显示下拉框
+        });
+
+        // 点击其他地方时隐藏下拉框
+        document.addEventListener("click", function (event) {
+            // 如果点击的地方既不是下拉框也不是输入框，隐藏下拉框
+            if (!dropdown.contains(event.target) && event.target !== searchText) {
+                dropdown.style.display = "none";  // 隐藏下拉框
+                suggestionsBox.style.display = 'none';
+            }
+        });
+
+        function loadQueryHistory() {
+            const query = document.getElementById("searchText").value;
+
+            fetch(`/history/get_history?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const dropdown = document.getElementById("historyDropdown");
+                    dropdown.innerHTML = ""; // 清空下拉框
+
+                    if (data.history && data.history.length > 0) {
+                        dropdown.style.display = "block";
+
+                        data.history.forEach(item => {
+                            const div = document.createElement("div");
+                            div.classList.add("history-item");
+                            div.textContent = item;
+
+                            div.onclick = () => {
+                                document.getElementById("searchText").value = item;
+                                dropdown.style.display = "none";
+                                search();
+                            };
+
+                            // 添加删除按钮
+                            const clearBtn = document.createElement("button");
+                            clearBtn.classList.add("clear-button");
+                            clearBtn.textContent = "删除";
+                            clearBtn.onclick = (e) => {
+                                e.stopPropagation(); // 阻止触发点击事件
+                                deleteHistory(item);
+                            };
+                            div.appendChild(clearBtn);
+
+                            dropdown.appendChild(div);// 将历史记录项添加到下拉框
+                        });
+                    } else {
+                        dropdown.style.display = "none";
+                    }
+                });
+        }
+
+        async function deleteHistory(query) {
+            const response = await fetch(`/history/delete_history`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query })
+            });
+            const data = await response.json();
+            if (data.success) {
+                loadQueryHistory();  // 数据删除成功后，刷新历史记录
+            }
+            //.then(response => response.json())
+            //   .then(data => {
+            //        loadQueryHistory();  // 确保历史记录在删除后被重新加载
+            //   });
+        }
+
+        function determineSearchType(query) {
+            // 判断输入类型
+            if (/^[a-zA-Z0-9/.:：]+$/.test(query)) {
+                return 'site_search';  // 站内查询
+            } else if (query.includes('%20')||query.includes(' ')) {
+                return 'multi_phrase_search';  // 短语查询(多个term)
+            } else if (/^[\u4e00-\u9fa5]+$/.test(query)) {
+                return 'one_phrase_search';  // 短语查询(一个term)
+            } else if (query.includes('*') || query.includes('?')|| query.includes('？')) {
+                return 'wildcard_search';  // 通配符查询
+            } else {
+                return 'site_search';  // 普通查询
+            }
+        }
+
+        // 文档查询
+        function documentSearch() {
+            var query = document.getElementById('searchText').value;
+            if (query) {
+                fetch('/search/documents?' + new URLSearchParams({query: query}),
+                {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('文档搜索结果:', data);
+                    const resultsContainer = document.getElementById('results');
+                    resultsContainer.innerHTML = '';  // 清空之前的结果
+
+                    if (data.length === 0) {
+                        resultsContainer.innerHTML = '<p>没有找到相关文档。</p>';
+                        return;
+                    }
+
+                    data.forEach(doc => {
+                        const resultElement = document.createElement('div');
+                        resultElement.innerHTML = `<p><strong><a href="${doc.url}" target="_blank">${doc.title}</a></strong></p>
+                                           <p>${doc.content.substring(0, 200)}...</p>`;
+                        resultsContainer.appendChild(resultElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        }
+
+        function search() {
+            var query = document.getElementById('searchText').value;
+            if (!query.trim()) return;
+
+            // 确定搜索类型
+            var searchType = determineSearchType(query);
+
+            // 构建请求参数
+            var searchParams = {
+                q: query,
+                type: searchType
+            };
+
+            // 根据不同类型的搜索调用不同的后端路由
+            fetch('/search/search?' + new URLSearchParams(searchParams))
+            .then(response => response.json())
+            .then(data => {
+                var resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '';  // 清空结果
+
+                if (data.length == 0) {
+                    resultsDiv.innerHTML = '没有找到相关结果。';
+                    return;
+                }
+
+                // 遍历并显示搜索结果
+                data.forEach(item => {
+                    var resultDiv = document.createElement('div');
+                    resultDiv.classList.add('result');
+                    
+                    var titleDiv = document.createElement('div');
+                    titleDiv.classList.add('result-title');
+                    // titleDiv.innerHTML = item.highlight.title ? item.highlight.title.join(' ') : '无标题';
+                    titleDiv.innerHTML = item.highlight.title ? 
+                        item.highlight.title.join(' ').replace(/<strong>/g, '<span style="color: red;">').replace(/<\/strong>/g, '</span>') : 
+                        item._source.title || '无标题';  
+
+                    var contentDiv = document.createElement('div');
+                    contentDiv.classList.add('result-content');
+                    // contentDiv.innerHTML = item.highlight.content ? item.highlight.content.join(' ') : '无内容';  // 使用 innerHTML 显示高亮内容
+                    contentDiv.innerHTML = item.highlight.content ? 
+                        item.highlight.content.join(' ').replace(/<strong>/g, '<span style="color: red;">').replace(/<\/strong>/g, '</span>') : 
+                        item._source.content || '';  
+
+                    var editorDiv = document.createElement('div');
+                    editorDiv.classList.add('result-editor');
+                    // editorDiv.innerHTML = item.highlight.editor ? item.highlight.editor.join(' ') : item._source.editor || '无编辑内容';  // 高亮编辑
+                    editorDiv.innerHTML = item.highlight.editor ? 
+                        item.highlight.editor.join(' ').replace(/<strong>/g, '<span style="color: red;">').replace(/<\/strong>/g, '</span>') : 
+                        item._source.editor || '';
+
+                    var urlDiv = document.createElement('div');
+                    urlDiv.classList.add('result-url');
+                    var link = document.createElement('a');
+                    link.href = item._source.url || '#';
+                    link.target = "_blank";
+                    urlDiv.innerHTML = item.highlight.url ? 
+                        item.highlight.url.join(' ').replace(/<strong>/g, '<span style="color: red;">').replace(/<\/strong>/g, '</span>') : 
+                        item._source.url || '';
+                    // link.textContent = item._source.url || '无链接';
+
+                    // 网页快照链接
+                    var snapshotDiv = document.createElement('div');
+                    snapshotDiv.classList.add('snapshot');
+                    var snapshotLink = document.createElement('a');
+                    snapshotLink.href = `/search/snapshot?title=${encodeURIComponent(item._source.title || '')}`;
+                    snapshotLink.target = "_blank";
+                    snapshotLink.innerHTML = '查看网页快照';
+                    snapshotDiv.appendChild(snapshotLink);
+
+                    urlDiv.appendChild(link);
+
+                    resultDiv.appendChild(titleDiv);
+                    resultDiv.appendChild(contentDiv);
+                    // resultDiv.appendChild('<br>');
+                    resultDiv.appendChild(editorDiv);
+                    resultDiv.appendChild(urlDiv);
+                    resultDiv.appendChild(snapshotDiv);  // 保留原 URL 后并添加网页快照链接
+                    resultsDiv.appendChild(resultDiv);
+                });
+            })
+            .catch(error => console.log('Error:', error));  // 错误处理
+
+            // 同步历史记录到后端
+            fetch(`/history/save_history`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query })
+            }).then(() => loadQueryHistory());  // 保存后重新加载历史记录
+        }
+    </script>
+</body>
+</html>
